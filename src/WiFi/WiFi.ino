@@ -9,6 +9,7 @@ void setup() {
     // 1. Inicializa o Tab5 (Tela, energia, etc.)
     auto cfg = M5.config();
     M5.begin(cfg);
+    M5.Display.setRotation(3); // Paisagem alinhado com o teclado físico
 
     M5.Display.setBrightness(128);
     M5.Display.clear();
@@ -40,10 +41,10 @@ void setup() {
         M5.Display.setTextColor(GREEN);
         M5.Display.printf("%d redes encontradas:\n", n);
         M5.Display.setTextSize(2);
-        M5.Display.setTextColor(LIGHTGRAY);
+        M5.Display.setTextColor(TFT_LIGHTGRAY);
 
-        // Exibe as primeiras 5 redes para não estourar o tamanho vertical do LCD
-        int limiteExibicao = (n > 5) ? 5 : n;
+        // Exibe até 10 redes encontradas na tela
+        int limiteExibicao = (n > 10) ? 10 : n;
         for (int i = 0; i < limiteExibicao; ++i) {
             M5.Display.printf(" -> %s (%d dBm)\n", WiFi.SSID(i).c_str(), WiFi.RSSI(i));
         }
@@ -61,17 +62,17 @@ void setup() {
     
     WiFi.begin(ssid, password);
 
-    // Loop tradicional Arduino aguardando a conexão (substitui o vTaskDelay do RTOS)
+    // Loop aguardando a conexão
     unsigned long timeoutInicial = millis();
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         M5.Display.print(".");
         
-        // Timeout de segurança após 15 segundos tentando conectar
-        if (millis() - timeoutInicial > 15000) {
-            M5.Display.setTextColor(RED);
-            M5.Display.println("\nFalha: Tempo limite de conexao esgotado!");
-            while(1); // Para a execução se errar a senha ou o roteador sumir
+        // Timeout após 8 segundos tentando conectar
+        if (millis() - timeoutInicial > 8000) {
+            M5.Display.setTextColor(YELLOW);
+            M5.Display.println("\n(Credenciais padrao nao configuradas. Redes escaneadas acima!)");
+            break;
         }
     }
 

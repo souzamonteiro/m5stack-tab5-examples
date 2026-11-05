@@ -26,7 +26,7 @@ void setup() {
     M5.Display.setTextSize(2.5);
     M5.Display.setTextColor(CYAN);
     M5.Display.drawString("Scheduler Dinamico por Vetores (Sem RTOS)", 20, 20);
-    M5.Display.drawFastHLine(20, 55, 760, DARKGRAY);
+    M5.Display.drawFastHLine(20, 55, 760, TFT_DARKGRAY);
 
     // 2. CADASTRO DE TAREFAS NO SCHEDULER
     // Sintaxe: { ponteiro_funcao, intervalo_ms, tempo_inicial_0, ativa_true/false }

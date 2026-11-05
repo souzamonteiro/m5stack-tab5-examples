@@ -20,12 +20,16 @@ void loop() {
         auto detail = M5.Touch.getDetail(0);
         
         if (detail.isPressed()) {
-            // Limpa uma área da tela para atualizar as coordenadas
-            M5.Display.fillRect(20, 100, 400, 50, BLACK);
+            // Limpa a área de texto e posiciona o cursor no mesmo lugar sempre
+            M5.Display.fillRect(20, 100, 600, 50, BLACK);
+            M5.Display.setCursor(20, 100);
             M5.Display.setTextColor(WHITE);
             
             // Exibe as coordenadas X e Y do toque
             M5.Display.printf("Toque detectado em X: %d, Y: %d", detail.x, detail.y);
+
+            // Desenha um indicador onde o dedo está tocando
+            M5.Display.fillCircle(detail.x, detail.y, 4, RED);
         }
     }
 }

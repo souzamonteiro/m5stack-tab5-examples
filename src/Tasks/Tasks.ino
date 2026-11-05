@@ -30,23 +30,46 @@ void tarefaMonitoraWiFi();
 void setup() {
     auto cfg = M5.config();
     M5.begin(cfg);
+    M5.Display.setRotation(3); // Modo paisagem (1280 x 720) alinhado com o teclado físico
     Wire.begin(KEYBOARD_SDA, KEYBOARD_SCL, 400000);
 
     M5.Display.setBrightness(128);
     M5.Display.clear();
     M5.Display.setTextSize(2.5);
     M5.Display.setTextColor(CYAN);
-    M5.Display.drawString("Multitarefa sem RTOS (millis)", 20, 20);
+    M5.Display.drawString("Multitarefa sem RTOS (millis)", 30, 20);
 
     // Inicializa conexão Wi-Fi de forma direta no setup
-    M5.Display.setCursor(20, 60);
+    M5.Display.setCursor(30, 60);
+    M5.Display.setTextColor(WHITE);
     M5.Display.print("Conectando Wi-Fi...");
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     
-    // Desenha as divisões estáticas da interface gráfica
-    M5.Display.drawRect(15, 100, 450, 150, DARKGRAY); // Área do teclado
-    M5.Display.drawString("Teclado:", 30, 110, &fonts::Font0);
+    // Desenha as divisões estáticas da interface gráfica (1280x720)
+    M5.Display.drawRect(30, 100, 600, 560, TFT_DARKGRAY); // Área do teclado
+    M5.Display.drawString("Teclado:", 45, 115);
+
+    // Coloca o teclado no modo caractere (0x02)
+    Wire.beginTransmission(TAB5_KEYBOARD_ADDR);
+    Wire.write(0x10);
+    Wire.write(0x02);
+    Wire.endTransmission();
+
+    Wire.beginTransmission(TAB5_KEYBOARD_ADDR);
+    Wire.write(0x00);
+    Wire.write(0x07);
+    Wire.endTransmission();
+
+    Wire.beginTransmission(TAB5_KEYBOARD_ADDR);
+    Wire.write(0x02);
+    Wire.write(0x00);
+    Wire.endTransmission();
+
+    Wire.beginTransmission(TAB5_KEYBOARD_ADDR);
+    Wire.write(0x01);
+    Wire.write(0x00);
+    Wire.endTransmission();
 }
 
 void loop() {
@@ -79,28 +102,45 @@ void loop() {
 // IMPLEMENTAÇÃO DAS TAREFAS (Sem nenhuma linha com delay!)
 // ====================================================================
 
-// TAREFA 1: Varredura rápida do teclado físico I2C
+// TAREFA 1: Varredura do teclado físico I2C (Protocolo Tab5 A164)
 void tarefaLeituraTeclado() {
-    Wire.requestFrom(TAB5_KEYBOARD_ADDR, 1);
-    if (Wire.available()) {
-        char c = Wire.read();
-        if (c != 0x00) {
-            if (c == 0x08 || c == 127) { // Backspace
-                if (bufferTeclado.length() > 0) {
-                    bufferTeclado.remove(bufferTeclado.length() - 1);
-                    M5.Display.fillRect(30, 150, 420, 40, BLACK);
-                }
-            } else if (c == 0x0D || c == 0x0A) { // Enter
-                bufferTeclado = "";
-                M5.Display.fillRect(30, 150, 420, 40, BLACK);
-            } else if (c >= 32 && c <= 126) {
-                bufferTeclado += c;
+    Wire.beginTransmission(TAB5_KEYBOARD_ADDR);
+    Wire.write(0x40);
+    if (Wire.endTransmission(false) != 0) return;
+    if (Wire.requestFrom(TAB5_KEYBOARD_ADDR, 1) != 1) return;
+    uint8_t len = Wire.read();
+    if (len == 0) return;
+
+    Wire.beginTransmission(TAB5_KEYBOARD_ADDR);
+    Wire.write(0x50);
+    if (Wire.endTransmission(false) != 0) return;
+    if (Wire.requestFrom(TAB5_KEYBOARD_ADDR, (uint8_t)(len + 1)) != (uint8_t)(len + 1)) return;
+
+    Wire.read(); // Byte 0: modifier
+
+    for (uint8_t i = 0; i < len; i++) {
+        char c = (char)Wire.read();
+        if (c == 0x08 || c == 127) { // Backspace
+            if (bufferTeclado.length() > 0) {
+                bufferTeclado.remove(bufferTeclado.length() - 1);
+                M5.Display.fillRect(45, 160, 570, 50, BLACK);
             }
-            M5.Display.setCursor(30, 150);
-            M5.Display.setTextColor(WHITE);
-            M5.Display.print(bufferTeclado);
+        } else if (c == 0x0D || c == 0x0A) { // Enter
+            bufferTeclado = "";
+            M5.Display.fillRect(45, 160, 570, 50, BLACK);
+        } else if (c >= 32 && c <= 126) {
+            bufferTeclado += c;
         }
     }
+    M5.Display.setCursor(45, 160);
+    M5.Display.setTextColor(WHITE);
+    M5.Display.print(bufferTeclado);
+
+    // Limpa interrupção
+    Wire.beginTransmission(TAB5_KEYBOARD_ADDR);
+    Wire.write(0x01);
+    Wire.write(0x00);
+    Wire.endTransmission();
 }
 
 // TAREFA 2: Animação visual na tela (Simula um LED piscando)
@@ -108,23 +148,23 @@ void tarefaPiscaIndicador() {
     estadoIndicador = !estadoIndicador; // Inverte o estado logico
     uint16_t cor = estadoIndicador ? GREEN : DARKGREEN;
     
-    // Desenha um círculo preenchido no canto superior direito
-    M5.Display.fillCircle(750, 30, 15, cor);
+    // Desenha um círculo preenchido no canto superior direito (1280px)
+    M5.Display.fillCircle(1220, 35, 15, cor);
 }
 
-// TAREFA 3: Monitora o sinal do Wi-Fi e atualiza dados na tela
+// TAREFA 3: Monitora o sinal do Wi-Fi e atualiza dados na tela (1280x720)
 void tarefaMonitoraWiFi() {
-    M5.Display.fillRect(490, 100, 280, 150, BLACK);
-    M5.Display.drawRect(490, 100, 280, 150, DARKGRAY);
-    M5.Display.setCursor(505, 115);
+    M5.Display.fillRect(661, 101, 588, 558, BLACK);
+    M5.Display.drawRect(660, 100, 590, 560, TFT_DARKGRAY);
+    M5.Display.setCursor(680, 125);
     
     if (WiFi.status() == WL_CONNECTED) {
         M5.Display.setTextColor(GREEN);
         M5.Display.println("Wi-Fi: CONECTADO");
-        M5.Display.setCursor(505, 150);
+        M5.Display.setCursor(680, 170);
         M5.Display.setTextColor(WHITE);
         M5.Display.printf("Sinal: %d dBm", WiFi.RSSI());
-        M5.Display.setCursor(505, 185);
+        M5.Display.setCursor(680, 215);
         M5.Display.print(WiFi.localIP().toString());
     } else {
         M5.Display.setTextColor(RED);

@@ -16,6 +16,7 @@ void setup() {
     // 1. Inicializa o ecossistema básico do M5Stack
     auto cfg = M5.config();
     M5.begin(cfg);
+    M5.Display.setRotation(3); // Paisagem alinhado com o teclado físico
 
     // Configuração visual inicial da tela
     M5.Display.setBrightness(128);
@@ -75,9 +76,9 @@ void setup() {
     M5.Display.setCursor(20, 160);
     M5.Display.println("Lendo o arquivo gravado:");
     
-    // Desenha uma borda cinza para destacar o conteúdo lido do SD
-    M5.Display.drawRect(15, 190, 700, 200, DARKGRAY);
-    M5.Display.setCursor(25, 200);
+    // Desenha uma borda cinza para destacar o conteúdo lido do SD (1280x720)
+    M5.Display.drawRect(20, 200, 1240, 480, TFT_DARKGRAY);
+    M5.Display.setCursor(35, 220);
     M5.Display.setTextColor(YELLOW);
 
     // Abre o arquivo apenas para leitura ("r" = read)
