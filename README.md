@@ -2,7 +2,11 @@
 
 Exemplos de código e testes de periféricos para o **M5Stack Tab5 (ESP32-P4 + companion ESP32-C6)** com display ST7121 MIPI-DSI de 5" (1280x720) e teclado físico STM32 A164.
 
-Todos os exemplos utilizam arquitetura **cooperativa e não-bloqueante** (sem depender de FreeRTOS), servindo como especificação e modelo de referência para o desenvolvimento de sistemas operacionais bare-metal (como o [MaiaRTOS / MaiaOS](https://github.com/roberto-l-monteiro/maia-rtos)).
+Os exemplos usam o core Arduino/ESP-IDF e bibliotecas M5Stack como referência
+para o desenvolvimento de sistemas bare-metal (como o
+[MaiaRTOS / MaiaOS](https://github.com/roberto-l-monteiro/maia-rtos)).
+A organização cooperativa do código de aplicação não elimina o runtime
+FreeRTOS do core; essas dependências precisam ser removidas nos ports nativos.
 
 ---
 
@@ -29,6 +33,7 @@ Todos os exemplos utilizam arquitetura **cooperativa e não-bloqueante** (sem de
 | **`WiFi`** | ESP32-C6 Co-Processor | Inicialização em modo STA e escaneamento das redes sem fio locais. |
 | **`Movement`** | IMU BMI270 + Gráficos | Leitura de acelerômetro/giroscópio 6-eixos e simulação física de uma bolinha na tela. |
 | **`MicroSD`** | Barramento SDIO 4-bits | Montagem do cartão, gravação de arquivo e leitura de volta no LCD. |
+| **`MicroSDReference`** | SDMMC bruto 4-bits | Referência somente de leitura dos setores selecionados e varredura limitada da FAT32 para localizar um cluster livre; sem montar filesystem. |
 | **`FullTest`** | Todos os Periféricos | Painel completo integrando Teclado, IMU, Touch, Bateria, Wi-Fi, MicroSD e CPU Load %. |
 
 ---
@@ -69,6 +74,39 @@ make monitor
 ---
 
 ## Protocolos de Hardware Importantes
+
+### Referência externa de leitura SD
+
+`MicroSDReference` usa ESP-IDF v5.5.4 fornecido pelo core Arduino M5Stack
+3.3.10, em slot 0/4 bits/20 MHz, com controle de alimentação LDO4. Esse firmware
+auxiliar depende do runtime Arduino/ESP-IDF/FreeRTOS; não faz parte do MaiaRTOS
+nativo e não demonstra independência de FreeRTOS.
+
+Após o boot, envie `R` pela serial a 115200 baud em até 30 segundos. O programa
+identifica o cartão e imprime os 512 bytes de cada LBA em registros
+`REFERENCE_DATA`, seguidos por metadados MBR/BPB/FAT32 e o primeiro cluster livre
+encontrado nos primeiros 4096 setores da FAT. `REFERENCE_FREE_DATA`
+contém o setor original desse cluster para permitir backup/verificação.
+O programa verifica os FATs espelhados (ou a FAT ativa indicada pelo BPB) e
+emite `MAIA_SDMMC_REFERENCE_PASS`; falhas emitem `REFERENCE_FAT_FAIL`.
+Não monta FatFs, abre arquivos, escreve setores ou formata o cartão.
+
+Compile com `make MicroSDReference`. A gravação substitui temporariamente o
+firmware na flash: preserve e verifique um backup antes de
+`make flash-MicroSDReference`, e restaure/verifique esse backup depois da comparação.
+Compare os mesmos LBAs e todos os bytes com o driver sob teste. O LBA candidato
+é um cluster livre segundo a FAT, não uma partição reservada; mantenha o cartão
+sem outras montagens enquanto o teste temporário for executado. Esta referência
+usa outro driver, mas o mesmo controlador e cartão; não substitui testes de
+remoção, falhas, alimentação ou outro controlador físico.
+
+No teste de referência, os quatro setores coincidiram com as capturas nativas.
+A flash de 16 MiB foi restaurada e comparada integralmente antes do reboot.
+O reset RTS não retomou o firmware legado; o reset oficial esptool
+`--after watchdog_reset chip_id` retomou o sistema, e o usuário confirmou
+desktop e teclado. Reabra a porta após o reset USB e evite pulsos DTR/RTS
+involuntários ao abrir a serial do firmware restaurado. O boot legado pode
+sincronizar arquivos no SD; isso não é uma escrita feita pela referência bruta.
 
 ### Teclado Físico (STM32 A164 @ I2C 0x6D)
 - **Barramento:** SDA no `GPIO 0`, SCL no `GPIO 1` (400 kHz).

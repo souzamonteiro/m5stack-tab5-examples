@@ -24,7 +24,7 @@ FQBN ?= m5stack:esp32:m5stack_tab5:PSRAM=enabled
 PORT ?= $(shell ls /dev/cu.usbmodem* /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | head -n 1)
 
 # Lista de todos os sketches disponíveis
-SKETCHES := Blink Echo Touch Scheduler Tasks WiFi Movement MicroSD FullTest
+SKETCHES := Blink Echo Touch Scheduler Tasks WiFi Movement MicroSD MicroSDReference FullTest
 
 .PHONY: all help list-ports clean $(SKETCHES) $(addprefix flash-,$(SKETCHES))
 
@@ -108,4 +108,3 @@ clean:
 	@echo "Limpando diretórios temporários de compilação..."
 	@rm -rf /Users/roberto/Library/Caches/arduino/sketches/* 2>/dev/null || true
 	@echo "Concluído."
-
